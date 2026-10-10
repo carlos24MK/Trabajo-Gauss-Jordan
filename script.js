@@ -453,7 +453,84 @@ function formatearNumero(numero) {
         return "0";
     }
 
-    return Number(numero.toPrecision(12)).toString();
+    if (Number.isInteger(numero)) {
+        return numero.toString();
+    }
+
+    // Mostrar fracciones simples sin alterar los calculos de Gauss-Jordan.
+    let signo = numero < 0 ? "-" : "";
+    let valor = Math.abs(Number(numero.toPrecision(12)));
+    let maximoDenominador = 1000000;
+    let numeradorAnterior = 0;
+    let numeradorActual = 1;
+    let denominadorAnterior = 1;
+    let denominadorActual = 0;
+    let restante = valor;
+
+    for (let i = 0; i < 32; i++) {
+        let entero = Math.floor(restante);
+        let numerador = entero * numeradorActual + numeradorAnterior;
+        let denominador = entero * denominadorActual + denominadorAnterior;
+
+        if (denominador > maximoDenominador ||
+            !Number.isSafeInteger(numerador) ||
+            !Number.isSafeInteger(denominador)) {
+            break;
+        }
+
+        // Aceptar fracciones equivalentes dentro de la precision de visualizacion.
+        if (numerador !== 0 &&
+            Math.abs(numerador / denominador - valor) <= Math.abs(valor) * 1e-10) {
+            if (denominador === 1) {
+                return signo + numerador;
+            }
+            return signo + numerador + "/" + denominador;
+        }
+
+        numeradorAnterior = numeradorActual;
+        numeradorActual = numerador;
+        denominadorAnterior = denominadorActual;
+        denominadorActual = denominador;
+
+        let parteDecimal = restante - entero;
+        if (parteDecimal === 0) {
+            break;
+        }
+        restante = 1 / parteDecimal;
+    }
+
+    // Si no existe una fraccion corta, convertir el decimal mostrado
+    // en una fraccion exacta de hasta 12 cifras significativas.
+    let partes = valor.toString().split("e");
+    let exponente = partes.length === 2 ? Number(partes[1]) : 0;
+    let numeroDecimal = partes[0].split(".");
+    let decimales = numeroDecimal.length === 2 ? numeroDecimal[1].length : 0;
+    let numerador = BigInt(numeroDecimal.join(""));
+    let potencia = exponente - decimales;
+    let denominador = 1n;
+
+    if (potencia >= 0) {
+        numerador = numerador * (10n ** BigInt(potencia));
+    } else {
+        denominador = 10n ** BigInt(-potencia);
+    }
+
+    let a = numerador;
+    let b = denominador;
+    while (b !== 0n) {
+        let residuo = a % b;
+        a = b;
+        b = residuo;
+    }
+
+    numerador = numerador / a;
+    denominador = denominador / a;
+
+    if (denominador === 1n) {
+        return signo + numerador.toString();
+    }
+
+    return signo + numerador.toString() + "/" + denominador.toString();
 }
 
 
@@ -485,7 +562,7 @@ function crearTablaMatriz(matriz, separador) {
 function mostrarPasos(pasos, separador) {
 
     let procedimiento = document.getElementById("procedimiento");
-    mostrarTexto("Los valores se muestran con hasta 12 cifras significativas.");
+    mostrarTexto("Los valores se muestran como fracciones simplificadas.");
 
     for (let i = 0; i < pasos.length; i++) {
         let paso = document.createElement("div");
