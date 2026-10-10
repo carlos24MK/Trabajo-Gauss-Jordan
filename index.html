@@ -1,0 +1,53 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Matrices</title>
+    <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+
+    <h1>Calculadora de Matrices</h1>
+
+    <h2>Seleccione una operación</h2>
+
+    <select id="tipo">
+        <option value="sistema">Resolver ecuaciones</option>
+        <option value="inversa">Calcular matriz inversa</option>
+    </select>
+
+    <h2>Dimensiones</h2>
+
+    <label for="filas">Filas:</label>
+    <input type="number" id="filas" min="1" value="2">
+
+    <label for="columnas">Columnas:</label>
+    <input type="number" id="columnas" min="1" value="2">
+
+    <button onclick="generarMatriz()">
+        Generar matriz
+    </button>
+
+    <h2>Ingrese los valores</h2>
+
+    <p>Para sistemas, las filas son ecuaciones y las columnas son incógnitas.
+        La última columna adicional contiene los términos independientes.</p>
+
+    <div id="contenedorMatriz"></div>
+
+    <button onclick="calcular()">
+        Calcular
+    </button>
+
+    <h2>Procedimiento paso a paso</h2>
+
+    <div id="procedimiento">
+        Aquí aparecerán las operaciones realizadas.
+    </div>
+
+    <script src="script.js"></script>
+
+</body>
+</html>
