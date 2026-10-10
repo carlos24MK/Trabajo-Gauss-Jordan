@@ -440,51 +440,74 @@ function formatearDeterminante(resultado) {
         return formatearNumero(resultado.determinante);
     }
 
-    // Notación científica si el producto desborda o es demasiado pequeño.
+    // Incluso para determinantes extremos, mostrar una fraccion en vez de decimales o notacion cientifica.
     let exponente = Math.floor(resultado.logDeterminante);
     let mantisa = resultado.signoDeterminante * Math.pow(10, resultado.logDeterminante - exponente);
+    let partes = formatearNumero(mantisa).split("/");
+    let numerador = BigInt(partes[0]);
+    let denominador = partes.length === 2 ? BigInt(partes[1]) : 1n;
 
-    return formatearNumero(mantisa) + " × 10^(" + exponente + ")";
+    if (exponente > 0) {
+        numerador = numerador * (10n ** BigInt(exponente));
+    } else if (exponente < 0) {
+        denominador = denominador * (10n ** BigInt(-exponente));
+    }
+
+    let a = numerador < 0n ? -numerador : numerador;
+    let b = denominador;
+    while (b !== 0n) {
+        let resto = a % b;
+        a = b;
+        b = resto;
+    }
+
+    numerador = numerador / a;
+    denominador = denominador / a;
+
+    return denominador === 1n ? numerador.toString() : numerador + "/" + denominador;
 }
 
 
+// Solo cambia la forma de mostrar los resultados: los calculos permanecen iguales.
 function formatearNumero(numero) {
+    if (!Number.isFinite(numero)) {
+        throw new Error("No se puede representar un resultado no finito como fraccion.");
+    }
+
     if (numero === 0) {
         return "0";
     }
 
+    // Los enteros se muestran como enteros, sin /1 y sin notacion cientifica.
     if (Number.isInteger(numero)) {
-        return numero.toString();
+        return BigInt(numero).toString();
     }
 
-    // Mostrar fracciones simples sin alterar los calculos de Gauss-Jordan.
     let signo = numero < 0 ? "-" : "";
-    let valor = Math.abs(Number(numero.toPrecision(12)));
-    let maximoDenominador = 1000000;
+    let valor = Math.abs(numero);
+
+    // Reconocer fracciones comunes, incluso tras operaciones con decimales
+    // de coma flotante: 0.5 -> 1/2, 0.3 -> 3/10, 1/3 -> 1/3.
     let numeradorAnterior = 0;
     let numeradorActual = 1;
     let denominadorAnterior = 1;
     let denominadorActual = 0;
     let restante = valor;
 
-    for (let i = 0; i < 32; i++) {
+    for (let i = 0; i < 40; i++) {
         let entero = Math.floor(restante);
         let numerador = entero * numeradorActual + numeradorAnterior;
         let denominador = entero * denominadorActual + denominadorAnterior;
 
-        if (denominador > maximoDenominador ||
+        if (denominador > 1000000000 ||
             !Number.isSafeInteger(numerador) ||
             !Number.isSafeInteger(denominador)) {
             break;
         }
 
-        // Aceptar fracciones equivalentes dentro de la precision de visualizacion.
         if (numerador !== 0 &&
-            Math.abs(numerador / denominador - valor) <= Math.abs(valor) * 1e-10) {
-            if (denominador === 1) {
-                return signo + numerador;
-            }
-            return signo + numerador + "/" + denominador;
+            Math.abs(numerador / denominador - valor) <= valor * 1e-12) {
+            return signo + numerador + (denominador === 1 ? "" : "/" + denominador);
         }
 
         numeradorAnterior = numeradorActual;
@@ -499,18 +522,18 @@ function formatearNumero(numero) {
         restante = 1 / parteDecimal;
     }
 
-    // Si no existe una fraccion corta, convertir el decimal mostrado
-    // en una fraccion exacta de hasta 12 cifras significativas.
-    let partes = valor.toString().split("e");
+    // Si la fraccion no es simple, convertir el valor mostrado a una fraccion
+    // de enteros (nunca devolver texto decimal).
+    let partes = Number(valor.toPrecision(14)).toString().split("e");
     let exponente = partes.length === 2 ? Number(partes[1]) : 0;
     let numeroDecimal = partes[0].split(".");
     let decimales = numeroDecimal.length === 2 ? numeroDecimal[1].length : 0;
     let numerador = BigInt(numeroDecimal.join(""));
-    let potencia = exponente - decimales;
     let denominador = 1n;
+    let potencia = exponente - decimales;
 
     if (potencia >= 0) {
-        numerador = numerador * (10n ** BigInt(potencia));
+        numerador *= 10n ** BigInt(potencia);
     } else {
         denominador = 10n ** BigInt(-potencia);
     }
@@ -518,19 +541,15 @@ function formatearNumero(numero) {
     let a = numerador;
     let b = denominador;
     while (b !== 0n) {
-        let residuo = a % b;
+        let resto = a % b;
         a = b;
-        b = residuo;
+        b = resto;
     }
 
-    numerador = numerador / a;
-    denominador = denominador / a;
+    numerador /= a;
+    denominador /= a;
 
-    if (denominador === 1n) {
-        return signo + numerador.toString();
-    }
-
-    return signo + numerador.toString() + "/" + denominador.toString();
+    return signo + numerador + (denominador === 1n ? "" : "/" + denominador);
 }
 
 
